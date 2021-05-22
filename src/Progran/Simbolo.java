@@ -9,14 +9,15 @@ public class Simbolo {
 		setSimbolo(simbolo);
 		setTipo();
 	}
-    
+
 	public String getTipo() {
 		return tipo;
 	}
+
 	public void setTipo() {
 		switch (getSimbolo()) {
-		
-		//letras
+
+		// letras
 		case "a":
 			tipo = "letra";
 			break;
@@ -95,7 +96,7 @@ public class Simbolo {
 		case "z":
 			tipo = "letra";
 			break;
-			
+
 		case "0":
 			tipo = "num";
 			break;
@@ -126,18 +127,17 @@ public class Simbolo {
 		case "9":
 			tipo = "num";
 			break;
-		//ponto flutuante
+		// ponto flutuante
 		case ".":
 			tipo = "ponto";
 			break;
-		
-		
+
 		default:
 			tipo = "outro";
 			break;
 		}
 	}
-	
+
 	public String getSimbolo() {
 		return simbolo;
 	}
