@@ -34,7 +34,7 @@ public class Principal {
 		hash.put("KW_AND", "and");
 		hash.put("KW_EOF", "eof");
 
-		File path = new File("C:\\Users\\ander\\OneDrive\\Área de Trabalho\\teste.txt");
+		File path = new File("C:\\Users\\ander\\Downloads\\teste.pasc");
 		try {
 			BufferedReader buff = new BufferedReader(new FileReader(path));
 			String linha = "";
@@ -45,7 +45,7 @@ public class Principal {
 				linha = buff.readLine();
 				if (linha != null) {
 					res = gerarToken(comentario, texto, linha, hash, linhaComent);
-					resposta.add(new Resultado(res.getToken(), res.getErro(), resposta.size() + 1));
+					resposta.add(new Resultado(res.getToken(), res.getErro(), resposta.size() + 1, res.getColuna()));
 					if (res.getComentario() == "true") {
 						comentario = true;
 					} else {
@@ -58,10 +58,10 @@ public class Principal {
 					}
 					linhaComent = res.getColunaComent();
 					if (linhaComent != 0) {
-						if(linhaC==0) {
+						if (linhaC == 0) {
 							linhaC = contador;
 						}
-						
+
 					} else {
 						linhaC = 0;
 					}
@@ -70,11 +70,15 @@ public class Principal {
 			}
 			// gerar token EOF
 			res = gerarToken(comentario, texto, "eof", hash, linhaComent);
-			resposta.add(new Resultado(res.getToken(), res.getErro(), resposta.size() + 1));
+			resposta.add(new Resultado(res.getToken(), res.getErro(), resposta.size() + 1, res.getColuna()));
+
+			// Imprime a Analise Lexica
+			System.out.println("Resultado Analise Lexica");
+			System.out.println();
 			imprimirToken(resposta);
-			if(linhaC!=0) {
-				System.out.println("Linha: "+linhaC);
-				System.out.println("Erros: Comentario não fechado, comentário iniciado na coluna: "+linhaComent);
+			if (linhaC != 0) {
+				System.out.println("Linha: " + linhaC);
+				System.out.println("Erros: Comentario não fechado, comentário iniciado na coluna: " + linhaComent);
 			}
 			buff.close();
 
@@ -86,8 +90,23 @@ public class Principal {
 			e.printStackTrace();
 		}
 
-	}
+		// Imprime a tabela de SImbolos
 
+		System.out.println("Tabela de Simbolos");
+		System.out.println();
+
+		for (String key : hash.keySet()) {
+			System.out.println(key);
+		}
+
+		// chama a analise Sintatica
+		
+		System.out.println("\n");
+		System.out.println("Analise Sintatica");
+		AnaliseSintatica sintatica = new AnaliseSintatica(resposta);
+
+		
+	}
 
 	private static RespostaToken gerarToken(boolean comentario, boolean texto, String linha,
 			HashMap<String, String> tbSimbolo, int coment) {
@@ -97,11 +116,19 @@ public class Principal {
 		String palavra = "";
 		String token = "";
 		String literal = "";
-
+		int coluna = 1;
+		ArrayList<Integer> colunas = new ArrayList<Integer>();
 		ArrayList<String> retornoToken = new ArrayList<String>();
 		RespostaToken resposta = new RespostaToken();
+		boolean auxString = false;
 		for (int x = 0; x < arraylinha.length; x++) {
-			simbolos.add(new Simbolo(arraylinha[x]));
+			if (arraylinha[x].equals("\"")) {
+				simbolos.add(new Simbolo(arraylinha[x], auxString));
+				auxString = !auxString;
+			} else {
+				simbolos.add(new Simbolo(arraylinha[x], auxString));
+			}
+
 		}
 		for (int x = 0; x < simbolos.size(); x++) {
 			int cont = 0;
@@ -110,6 +137,9 @@ public class Principal {
 				case "letra":
 					// Forma as palavras da linguagem
 					if (comentario == false) {
+						if (palavra.equals("")) {
+							colunas.add(coluna);
+						}
 						palavra += simbolos.get(x).getSimbolo();
 
 						for (int y = x + 1; y < simbolos.size(); y++) {
@@ -117,6 +147,7 @@ public class Principal {
 
 								palavra += simbolos.get(y).getSimbolo();
 								cont += 1;
+								coluna += 1;
 							} else {
 
 								if (tbSimbolo.containsKey("KW_" + palavra.toUpperCase())) {
@@ -147,6 +178,7 @@ public class Principal {
 					// forma os numerais das palavras
 					if (comentario == false) {
 						String number = "";
+						colunas.add(coluna);
 						number += simbolos.get(x).getSimbolo();
 						if (0 == simbolos.size() - 1) {
 							tbSimbolo.put("NUM_CONST_" + number, number);
@@ -156,7 +188,7 @@ public class Principal {
 							break;
 						}
 						for (int y = x + 1; y < simbolos.size(); y++) {
-							if (simbolos.get(y).getTipo() == "num") {
+							if (simbolos.get(y).getTipo() == "num" || simbolos.get(y).getSimbolo().equals(".")) {
 								number += simbolos.get(y).getSimbolo();
 							} else {
 								if (simbolos.get(y).getTipo() == "ponto") {
@@ -179,6 +211,7 @@ public class Principal {
 										break;
 									}
 									y += cont2;
+									coluna += cont2;
 								} else {
 									tbSimbolo.put("NUM_CONST_" + number, number);
 									token += "<" + "NUM_CONST" + "," + tbSimbolo.get("NUM_CONST_" + number) + ">";
@@ -190,6 +223,7 @@ public class Principal {
 
 							}
 							cont += 1;
+							coluna += 1;
 						}
 						x += cont;
 					}
@@ -216,6 +250,7 @@ public class Principal {
 								default:
 									if (tbSimbolo.get("OP_DIV") != "") {
 										tbSimbolo.put("OP_DIV", simbolos.get(x).getSimbolo());
+										colunas.add(coluna);
 									}
 									token += "<" + "OP_DIV" + "," + tbSimbolo.get("OP_DIV") + ">";
 									retornoToken.add(token);
@@ -232,6 +267,7 @@ public class Principal {
 							if (x == simbolos.size() - 1) {
 								if (tbSimbolo.get("OP_ATRIB") != "=") {
 									tbSimbolo.put("OP_ATRIB", simbolos.get(x).getSimbolo());
+									colunas.add(coluna);
 								}
 								token += "<" + "OP_ATRIB" + "," + tbSimbolo.get("OP_ATRIB") + ">";
 								retornoToken.add(token);
@@ -240,17 +276,19 @@ public class Principal {
 								for (int y = x + 1; y < simbolos.size(); y++) {
 									if (" ".equals(simbolos.get(y).getSimbolo())) {
 										cont += 1;
+										coluna += 1;
 									} else {
 										if ("=".equals(simbolos.get(y).getSimbolo())) {
 											if (tbSimbolo.get("OP_EQ") != "==") {
 												String item = "=" + simbolos.get(y).getSimbolo();
 												tbSimbolo.put("OP_EQ", item);
-
+												colunas.add(coluna);
 											}
 											token += "<" + "OP_EQ" + "," + tbSimbolo.get("OP_EQ") + ">";
 											retornoToken.add(token);
 											token = "";
 											cont += 1;
+											coluna += 1;
 											break;
 										} else {
 											if (tbSimbolo.get("OP_ATRIB") != "=") {
@@ -259,6 +297,7 @@ public class Principal {
 											token += "<" + "OP_ATRIB" + "," + tbSimbolo.get("OP_ATRIB") + ">";
 											retornoToken.add(token);
 											token = "";
+											colunas.add(coluna);
 											break;
 										}
 
@@ -272,10 +311,12 @@ public class Principal {
 							if (x == simbolos.size() - 1) {
 								erro = "Caracter esperado não encontrado na coluna " + (x + 1);
 								cont += 1;
+								coluna += 1;
 							} else {
 								for (int y = x + 1; y < simbolos.size(); y++) {
 									if (" ".equals(simbolos.get(y).getSimbolo())) {
 										cont += 1;
+										coluna += 1;
 									} else {
 										if ("=".equals(simbolos.get(y).getSimbolo())) {
 											if (tbSimbolo.get("OP_NE") != "!=") {
@@ -284,8 +325,10 @@ public class Principal {
 											}
 											token += "<" + "OP_NE" + "," + tbSimbolo.get("OP_NE") + ">";
 											retornoToken.add(token);
+											colunas.add(coluna);
 											token = "";
 											cont += 1;
+											coluna += 1;
 											break;
 										} else {
 											erro = "Caracter esperado não encontrado na coluna " + (x + 1);
@@ -305,6 +348,7 @@ public class Principal {
 								}
 								token += "<" + "OP_GT" + "," + tbSimbolo.get("OP_GT") + ">";
 								retornoToken.add(token);
+								colunas.add(coluna);
 								token = "";
 							} else {
 								for (int y = x + 1; y < simbolos.size(); y++) {
@@ -320,6 +364,7 @@ public class Principal {
 											}
 											token += "<" + "OP_GE" + "," + tbSimbolo.get("OP_GE") + ">";
 											retornoToken.add(token);
+											colunas.add(coluna);
 											token = "";
 											cont += 1;
 											break;
@@ -329,6 +374,7 @@ public class Principal {
 								}
 
 								x += cont;
+								coluna += cont;
 							}
 							break;
 						case "<":
@@ -339,6 +385,7 @@ public class Principal {
 								}
 								token += "<" + "OP_LT" + "," + tbSimbolo.get("OP_LT") + ">";
 								retornoToken.add(token);
+								colunas.add(coluna);
 								token = "";
 							} else {
 
@@ -355,6 +402,7 @@ public class Principal {
 											}
 											token += "<" + "OP_LE" + "," + tbSimbolo.get("OP_LE") + ">";
 											retornoToken.add(token);
+											colunas.add(coluna);
 											token = "";
 											cont += 1;
 											break;
@@ -364,6 +412,7 @@ public class Principal {
 								}
 
 								x += cont;
+								coluna += cont;
 							}
 							break;
 						case "+":
@@ -372,6 +421,7 @@ public class Principal {
 							}
 							token += "<" + "OP_AD" + "," + tbSimbolo.get("OP_AD") + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 							break;
 						case "-":
@@ -380,6 +430,7 @@ public class Principal {
 							}
 							token += "<" + "OP_MIN" + "," + tbSimbolo.get("OP_MIN") + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 							break;
 						case "*":
@@ -388,6 +439,7 @@ public class Principal {
 							}
 							token += "<" + "OP_MUL" + "," + tbSimbolo.get("OP_MUL") + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 							break;
 
@@ -398,6 +450,7 @@ public class Principal {
 							}
 							token += "<" + "SMB_OBC" + "," + tbSimbolo.get("SMB_OBC") + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 
 							break;
@@ -407,6 +460,7 @@ public class Principal {
 							}
 							token += "<" + "SMB_CBC" + "," + tbSimbolo.get("SMB_CBC") + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 
 							break;
@@ -416,6 +470,7 @@ public class Principal {
 							}
 							token += "<" + "SMB_OPA" + "," + tbSimbolo.get("SMB_OPA") + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 
 							break;
@@ -425,6 +480,7 @@ public class Principal {
 							}
 							token += "<" + "SMB_CPA" + "," + tbSimbolo.get("SMB_CPA") + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 
 							break;
@@ -434,6 +490,7 @@ public class Principal {
 							}
 							token += "<" + "SMB_COM" + "," + tbSimbolo.get("SMB_COM") + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 
 							break;
@@ -443,6 +500,7 @@ public class Principal {
 							}
 							token += "<" + "SMB_SEM" + "," + tbSimbolo.get("SMB_SEM") + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 							break;
 						case "\"":
@@ -481,9 +539,9 @@ public class Principal {
 
 				}
 			} else {
-				//Caso seja Char COnt
+				// Caso seja Char COnt
 				literal += simbolos.get(x).getSimbolo();
-				if(x==simbolos.size()-1&&!"\"".equals(simbolos.get(x).getSimbolo())) {
+				if (x == simbolos.size() - 1 && !"\"".equals(simbolos.get(x).getSimbolo())) {
 					erro = "Erro na coluna: " + x + ", aspas não foram fechadas";
 				}
 				if ("\"".equals(simbolos.get(x).getSimbolo())) {
@@ -500,6 +558,7 @@ public class Principal {
 							}
 							token += "<" + "CHAR_CONST" + "," + tbSimbolo.get("CHAR_CONST_" + literal) + ">";
 							retornoToken.add(token);
+							colunas.add(coluna);
 							token = "";
 							texto = false;
 							break;
@@ -515,11 +574,13 @@ public class Principal {
 
 					}
 					x += cont;
+					coluna += cont;
 				}
 				texto = false;
 
 			}
-
+			// incrementa a coluna
+			coluna += 1;
 		}
 		if (palavra != "") {
 
@@ -555,6 +616,8 @@ public class Principal {
 		resposta.setErro(erro);
 		resposta.setColunaComent(coment);
 
+		resposta.setColuna(colunas);
+
 		return resposta;
 	}
 
@@ -562,16 +625,16 @@ public class Principal {
 		resul.forEach((c) -> {
 			if (c.getToken().size() != 0) {
 				System.out.println("Linha: " + c.getLinha());
-				System.out.print("Token: ");
-				c.getToken().forEach((t) -> {
-					System.out.print(t + " ");
-				});
+
+				for (int x = 0; x <= c.getToken().size() - 1; x++) {
+					System.out.println("Coluna: " + c.getColuna().get(x) + ", Token: " + c.getToken().get(x));
+				}
+
 				System.out.println("");
 				if (c.getErro() != "") {
 					System.out.print("Erros: " + c.getErro());
 
 				}
-				System.out.println("\n");
 
 			} else {
 				if ((c.getToken().size() == 0) && (c.getErro() != "")) {
@@ -580,8 +643,8 @@ public class Principal {
 					System.out.println("\n");
 				}
 			}
-
 		});
 
 	}
+
 }

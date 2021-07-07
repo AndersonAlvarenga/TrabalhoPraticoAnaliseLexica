@@ -6,11 +6,20 @@ public class RespostaToken {
 	private String comentario;
 	private String texto;
 	private ArrayList<String> token;
+	private ArrayList<Integer> coluna;
 	private String erro;
 	private int colunaComent;
 
 	public int getColunaComent() {
 		return colunaComent;
+	}
+
+	public ArrayList<Integer> getColuna() {
+		return coluna;
+	}
+
+	public void setColuna(ArrayList<Integer> coluna) {
+		this.coluna = coluna;
 	}
 
 	public void setColunaComent(int colunaComent) {
